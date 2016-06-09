@@ -40,12 +40,13 @@ impl Maze {
 
 	fn generate(&mut self) {
 		self.clear_grid();
-		let x = rand::thread_rng().gen_range(1, self.width);
-		let y = rand::thread_rng().gen_range(1, self.height);
+		let x = rand::thread_rng().gen_range(1, self.width - 1);
+		let y = rand::thread_rng().gen_range(1, self.height - 1);
 
 		let x = if x % 2 == 0 { x + 1} else { x };
 		let y = if y % 2 == 0 { y + 1} else { y };
 
+		// First frontier cell needs to be odd to guarantee borders
 		let cell = CellPos(x, y);
 		{
 			let entry = self.grid.get_mut(&cell).unwrap();
@@ -111,7 +112,8 @@ impl Maze {
 }
 
 fn main() {
-	let mut maze: Maze = Maze::new(81, 81);
+	// Maze size needs to be odd to have borders
+	let mut maze: Maze = Maze::new(11, 11);
 	maze.generate();
 	for y in 0..maze.width {
 		for x in 0..maze.height {
