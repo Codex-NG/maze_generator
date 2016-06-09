@@ -40,8 +40,11 @@ impl Maze {
 
 	fn generate(&mut self) {
 		self.clear_grid();
-		let x = rand::thread_rng().gen_range(0, self.width);
-		let y = rand::thread_rng().gen_range(0, self.height);
+		let x = rand::thread_rng().gen_range(1, self.width);
+		let y = rand::thread_rng().gen_range(1, self.height);
+
+		let x = if x % 2 == 0 { x + 1} else { x };
+		let y = if y % 2 == 0 { y + 1} else { y };
 
 		let cell = CellPos(x, y);
 		{
@@ -71,11 +74,11 @@ impl Maze {
 				*entry = CellState::PASSAGE;
 			}
 
-			for value in self.get_adjcells(cell, CellState::BLOCKED).into_iter() {
-				if !frontiers.contains(&value) {
-					frontiers.push(value);
-				}
-			}
+			let v: Vec<CellPos> = self.get_adjcells(cell, CellState::BLOCKED)
+										.into_iter()
+										.filter(|value| !frontiers.contains(value))
+										.collect();
+			frontiers.extend(v.into_iter());
 		}
 	}
 
