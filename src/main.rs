@@ -70,7 +70,12 @@ impl Maze {
 				let entry = self.grid.get_mut(&cell).unwrap();
 				*entry = CellState::PASSAGE;
 			}
-			frontiers.extend(self.get_adjcells(cell, CellState::BLOCKED).into_iter());
+
+			for value in self.get_adjcells(cell, CellState::BLOCKED).into_iter() {
+				if !frontiers.contains(&value) {
+					frontiers.push(value);
+				}
+			}
 		}
 	}
 
@@ -103,7 +108,7 @@ impl Maze {
 }
 
 fn main() {
-	let mut maze: Maze = Maze::new(80, 80);
+	let mut maze: Maze = Maze::new(81, 81);
 	maze.generate();
 	for y in 0..maze.width {
 		for x in 0..maze.height {
