@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::ops::Sub;
 
+#[derive(PartialEq)]
 enum CellState {
 	PASSAGE,
 	BLOCKED,
@@ -48,11 +49,11 @@ impl Maze {
 			*entry = CellState::PASSAGE;
 		}
 
-		let mut frontiers = self.get_frontiers(cell);
+		let mut frontiers = self.get_adjcells(cell, CellState::BLOCKED);
 		while !frontiers.is_empty() {
 			let index = rand::thread_rng().gen_range(0, frontiers.len());
 			let cell = frontiers.swap_remove(index);
-			let neighboors = self.get_neighboors(cell);
+			let neighboors = self.get_adjcells(cell, CellState::PASSAGE);
 
 			if neighboors.len() == 0 {
 				continue;
@@ -69,7 +70,7 @@ impl Maze {
 				let entry = self.grid.get_mut(&cell).unwrap();
 				*entry = CellState::PASSAGE;
 			}
-			frontiers.extend(self.get_frontiers(cell).into_iter());
+			frontiers.extend(self.get_adjcells(cell, CellState::BLOCKED).into_iter());
 		}
 	}
 
@@ -82,42 +83,22 @@ impl Maze {
 		}
 	}
 
-	fn get_frontiers(&self, cell_pos: CellPos) -> Vec<CellPos> {
-		let mut frontiers = Vec::<CellPos>::new();
-		let frontiers_pos = vec![CellPos(cell_pos.0 - 2, cell_pos.1),
+	fn get_adjcells(&self, cell_pos: CellPos, cell_state: CellState) -> Vec<CellPos> {
+		let mut adjcells = Vec::<CellPos>::new();
+		let adjcells_pos = vec![CellPos(cell_pos.0 - 2, cell_pos.1),
 								CellPos(cell_pos.0 + 2, cell_pos.1),
 								CellPos(cell_pos.0, cell_pos.1 - 2),
 								CellPos(cell_pos.0, cell_pos.1 + 2),];
 
-		for pos in frontiers_pos.into_iter() {
+		for pos in adjcells_pos.into_iter() {
 			if let Some(entry) = self.grid.get(&pos) {
-				match *entry {
-					CellState::BLOCKED => frontiers.push(pos),
-					_ => {},
+				if *entry == cell_state {
+					adjcells.push(pos);
 				}
 			}
 		}
 
-		frontiers
-	}
-
-	fn get_neighboors(&self, cell_pos: CellPos) -> Vec<CellPos> {
-		let mut neighboors = Vec::<CellPos>::new();
-		let neighboors_pos = vec![CellPos(cell_pos.0 - 2, cell_pos.1),
-								CellPos(cell_pos.0 + 2, cell_pos.1),
-								CellPos(cell_pos.0, cell_pos.1 - 2),
-								CellPos(cell_pos.0, cell_pos.1 + 2),];
-
-		for pos in neighboors_pos.into_iter() {
-			if let Some(entry) = self.grid.get(&pos) {
-				match *entry {
-					CellState::PASSAGE => neighboors.push(pos),
-					_ => {},
-				}
-			}
-		}
-
-		neighboors
+		adjcells
 	}
 }
 
