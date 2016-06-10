@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use std::ops::Sub;
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 enum CellState {
 	PASSAGE,
 	BLOCKED,
@@ -14,7 +14,7 @@ enum CellState {
 	EXIT,
 }
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 struct CellPos(i32, i32);
 
 impl Sub for CellPos {
@@ -56,14 +56,13 @@ impl Maze {
 			*entry = CellState::PASSAGE;
 		}
 
-		let mut passages = 0;
-		let mut frontiers = self.get_adjcells(cell, CellState::BLOCKED);
+		let mut frontiers = self.get_adjcells(cell, CellState::BLOCKED, 2);
 		while !frontiers.is_empty() {
 			let index = rand::thread_rng().gen_range(0, frontiers.len());
 			let cell = frontiers.swap_remove(index);
-			let neighboors = self.get_adjcells(cell, CellState::PASSAGE);
+			let neighboors = self.get_adjcells(cell, CellState::PASSAGE, 2);
 
-			if neighboors.len() == 0 {
+			if neighboors.is_empty() {
 				continue;
 			}
 
@@ -77,14 +76,9 @@ impl Maze {
 			{
 				let entry = self.grid.get_mut(&cell).unwrap();
 				*entry = CellState::PASSAGE;
-				passages = passages + 1;
-				if passages == 6 {
-					passages = 0;
-					*entry = CellState::LIGHT;
-				}
 			}
 
-			let v: Vec<CellPos> = self.get_adjcells(cell, CellState::BLOCKED)
+			let v: Vec<CellPos> = self.get_adjcells(cell, CellState::BLOCKED, 2)
 										.into_iter()
 										.filter(|value| !frontiers.contains(value))
 										.collect();
@@ -92,13 +86,15 @@ impl Maze {
 		}
 
 		{
-			let entry = self.grid.get_mut(&CellPos(1, 1)).unwrap();
+			let entry = self.grid.get_mut(&CellPos(1, 0)).unwrap();
 			*entry = CellState::ENTRY;
 		}
 		{
-			let entry = self.grid.get_mut(&CellPos(self.width - 2, self.height - 2)).unwrap();
+			let entry = self.grid.get_mut(&CellPos(self.width - 2, self.height - 1)).unwrap();
 			*entry = CellState::EXIT;
 		}
+
+		self.generate_light();
 	}
 
 	fn clear_grid(&mut self) {
@@ -110,12 +106,12 @@ impl Maze {
 		}
 	}
 
-	fn get_adjcells(&self, cell_pos: CellPos, cell_state: CellState) -> Vec<CellPos> {
+	fn get_adjcells(&self, cell_pos: CellPos, cell_state: CellState, dist: i32) -> Vec<CellPos> {
 		let mut adjcells = Vec::<CellPos>::new();
-		let adjcells_pos = vec![CellPos(cell_pos.0 - 2, cell_pos.1),
-								CellPos(cell_pos.0 + 2, cell_pos.1),
-								CellPos(cell_pos.0, cell_pos.1 - 2),
-								CellPos(cell_pos.0, cell_pos.1 + 2),];
+		let adjcells_pos = vec![CellPos(cell_pos.0 - dist, cell_pos.1),
+								CellPos(cell_pos.0 + dist, cell_pos.1),
+								CellPos(cell_pos.0, cell_pos.1 - dist),
+								CellPos(cell_pos.0, cell_pos.1 + dist),];
 
 		for pos in adjcells_pos.into_iter() {
 			if let Some(entry) = self.grid.get(&pos) {
@@ -127,11 +123,58 @@ impl Maze {
 
 		adjcells
 	}
+
+	fn generate_light(&mut self) {
+		let mut check_stack = Vec::<CellPos>::new();
+		let mut visited_cells = Vec::<CellPos>::new();
+		let mut illuminated_cells = Vec::<CellPos>::new();
+
+		check_stack.push(CellPos(1, 1));
+
+		let mut steps = 0;
+		while !check_stack.is_empty() {
+			let check_pos = check_stack.pop().unwrap();
+			visited_cells.push(check_pos);
+
+			let mut neighboors: Vec<CellPos> = self.get_adjcells(check_pos, CellState::PASSAGE, 1)
+												.into_iter()
+												.filter(|value| !visited_cells.contains(value))
+												.collect();
+			check_stack.extend(neighboors.iter());
+			steps = steps + 1;
+			if steps >= 4 && !illuminated_cells.contains(&check_pos) {
+				{
+					let entry = self.grid.get_mut(&check_pos).unwrap();
+					*entry = CellState::LIGHT;
+				}
+
+				self.get_diagonal_cells(&mut neighboors, check_pos);
+				neighboors.extend(self.get_adjcells(check_pos, CellState::PASSAGE, 2).into_iter());
+
+				illuminated_cells.extend(neighboors.into_iter());
+
+				steps = 0;
+			}
+		}
+	}
+
+	fn get_diagonal_cells(&self, neighboors: &mut Vec<CellPos>, center: CellPos) {
+		for nx in vec![-1, 1] {
+			for ny in vec![-1, 1] {
+				let n_pos = CellPos(center.0 + nx, center.1 + ny);
+				if let Some(entry) = self.grid.get(&n_pos) {
+					if *entry == CellState::PASSAGE {
+						neighboors.push(n_pos);
+					}
+				}
+			}
+		}
+	}
 }
 
 fn main() {
 	// Maze size needs to be odd to have borders
-	let mut maze: Maze = Maze::new(11, 11);
+	let mut maze: Maze = Maze::new(21, 21);
 	maze.generate();
 	for y in 0..maze.width {
 		for x in 0..maze.height {
@@ -139,8 +182,8 @@ fn main() {
 			if let Entry::Occupied(entry) = maze.grid.entry(cell_pos) {
 				match *entry.get() {
 					CellState::BLOCKED => print!("#"),
-					CellState::PASSAGE => print!("."),
-					CellState::LIGHT => print!("L"),
+					CellState::PASSAGE => print!(" "),
+					CellState::LIGHT => print!("."),
 					CellState::ENTRY => print!("E"),
 					CellState::EXIT => print!("S"),
 				}
