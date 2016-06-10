@@ -9,6 +9,9 @@ use std::ops::Sub;
 enum CellState {
 	PASSAGE,
 	BLOCKED,
+	LIGHT,
+	ENTRY,
+	EXIT,
 }
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
@@ -53,6 +56,7 @@ impl Maze {
 			*entry = CellState::PASSAGE;
 		}
 
+		let mut passages = 0;
 		let mut frontiers = self.get_adjcells(cell, CellState::BLOCKED);
 		while !frontiers.is_empty() {
 			let index = rand::thread_rng().gen_range(0, frontiers.len());
@@ -73,6 +77,11 @@ impl Maze {
 			{
 				let entry = self.grid.get_mut(&cell).unwrap();
 				*entry = CellState::PASSAGE;
+				passages = passages + 1;
+				if passages == 6 {
+					passages = 0;
+					*entry = CellState::LIGHT;
+				}
 			}
 
 			let v: Vec<CellPos> = self.get_adjcells(cell, CellState::BLOCKED)
@@ -80,6 +89,15 @@ impl Maze {
 										.filter(|value| !frontiers.contains(value))
 										.collect();
 			frontiers.extend(v.into_iter());
+		}
+
+		{
+			let entry = self.grid.get_mut(&CellPos(1, 1)).unwrap();
+			*entry = CellState::ENTRY;
+		}
+		{
+			let entry = self.grid.get_mut(&CellPos(self.width - 2, self.height - 2)).unwrap();
+			*entry = CellState::EXIT;
 		}
 	}
 
@@ -122,6 +140,9 @@ fn main() {
 				match *entry.get() {
 					CellState::BLOCKED => print!("#"),
 					CellState::PASSAGE => print!("."),
+					CellState::LIGHT => print!("L"),
+					CellState::ENTRY => print!("E"),
+					CellState::EXIT => print!("S"),
 				}
 			}
 		}
