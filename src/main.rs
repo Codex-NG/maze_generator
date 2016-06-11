@@ -176,7 +176,7 @@ impl Maze {
 					*entry = CellState::LIGHT;
 				}
 				illuminated_cells.extend(neighboors.into_iter());
-
+				illuminated_cells.push(check_pos);
 				steps = 0;
 			}
 		}
