@@ -115,8 +115,14 @@ impl Maze {
 
 		for pos in adjcells_pos.into_iter() {
 			if let Some(entry) = self.grid.get(&pos) {
-				if *entry == cell_state {
-					adjcells.push(pos);
+				match *entry {
+					CellState::BLOCKED if cell_state == CellState::BLOCKED => adjcells.push(pos),
+					CellState::LIGHT | CellState::PASSAGE => {
+						if cell_state != CellState::BLOCKED {
+							adjcells.push(pos);
+						}
+					},
+					_ => {}
 				}
 			}
 		}
@@ -132,7 +138,7 @@ impl Maze {
 		check_stack.push(CellPos(1, 1));
 
 		let mut steps = 0;
-		while !check_stack.is_empty() {
+		'outter: while !check_stack.is_empty() {
 			let check_pos = check_stack.pop().unwrap();
 			visited_cells.push(check_pos);
 
@@ -143,14 +149,32 @@ impl Maze {
 			check_stack.extend(neighboors.iter());
 			steps = steps + 1;
 			if steps >= 4 && !illuminated_cells.contains(&check_pos) {
+				self.get_diagonal_cells(&mut neighboors, check_pos);
+				let mut v: Vec<CellPos> = self.get_adjcells(check_pos, CellState::PASSAGE, 2);
+				let mut remove_v: Vec<usize> = Vec::new();
+				for x in 0..v.len() {
+					let pos = check_pos - v[x];
+					if !neighboors.contains(&pos) {
+						remove_v.push(x);
+					}
+				}
+
+				remove_v.reverse();
+				for index in remove_v {
+					v.remove(index);
+				}
+
+				neighboors.extend(v.into_iter());
+				for neighboor in &neighboors {
+					if illuminated_cells.contains(neighboor) {
+						continue 'outter;
+					}
+				}
+
 				{
 					let entry = self.grid.get_mut(&check_pos).unwrap();
 					*entry = CellState::LIGHT;
 				}
-
-				self.get_diagonal_cells(&mut neighboors, check_pos);
-				neighboors.extend(self.get_adjcells(check_pos, CellState::PASSAGE, 2).into_iter());
-
 				illuminated_cells.extend(neighboors.into_iter());
 
 				steps = 0;
