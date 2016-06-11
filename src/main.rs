@@ -142,13 +142,16 @@ impl Maze {
 			let check_pos = check_stack.pop().unwrap();
 			visited_cells.push(check_pos);
 
-			let mut neighboors: Vec<CellPos> = self.get_adjcells(check_pos, CellState::PASSAGE, 1)
+			let neighboors: Vec<CellPos> = self.get_adjcells(check_pos, CellState::PASSAGE, 1)
 												.into_iter()
 												.filter(|value| !visited_cells.contains(value))
 												.collect();
 			check_stack.extend(neighboors.iter());
 			steps = steps + 1;
 			if steps >= 4 && !illuminated_cells.contains(&check_pos) {
+				let mut neighboors: Vec<CellPos> = self.get_adjcells(check_pos, CellState::PASSAGE, 1)
+									.into_iter()
+									.collect();
 				self.get_diagonal_cells(&mut neighboors, check_pos);
 				let mut v: Vec<CellPos> = self.get_adjcells(check_pos, CellState::PASSAGE, 2);
 				let mut remove_v: Vec<usize> = Vec::new();
@@ -177,6 +180,7 @@ impl Maze {
 				}
 				illuminated_cells.extend(neighboors.into_iter());
 				illuminated_cells.push(check_pos);
+
 				steps = 0;
 			}
 		}
@@ -198,7 +202,7 @@ impl Maze {
 
 fn main() {
 	// Maze size needs to be odd to have borders
-	let mut maze: Maze = Maze::new(21, 21);
+	let mut maze: Maze = Maze::new(15, 15);
 	maze.generate();
 	for y in 0..maze.width {
 		for x in 0..maze.height {
