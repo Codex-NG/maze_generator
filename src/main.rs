@@ -34,6 +34,8 @@ struct Maze {
 
 impl Maze {
 	fn new(height: i32, width: i32) -> Maze {
+		let height = if height % 2 == 0 { height + 1} else { height };
+		let width = if width % 2 == 0 { width + 1} else { width };
 		Maze {
 			height: height,
 			width: width,
@@ -46,8 +48,8 @@ impl Maze {
 		let x = rand::thread_rng().gen_range(1, self.width - 1);
 		let y = rand::thread_rng().gen_range(1, self.height - 1);
 
-		let x = if x % 2 == 0 { x + 1} else { x };
-		let y = if y % 2 == 0 { y + 1} else { y };
+		let x = if x % 2 == 0 { x - 1} else { x };
+		let y = if y % 2 == 0 { y - 1} else { y };
 
 		// First frontier cell needs to be odd to guarantee borders
 		let cell = CellPos(x, y);
@@ -204,8 +206,8 @@ fn main() {
 	// Maze size needs to be odd to have borders
 	let mut maze: Maze = Maze::new(15, 15);
 	maze.generate();
-	for y in 0..maze.width {
-		for x in 0..maze.height {
+	for y in 0..maze.height {
+		for x in 0..maze.width {
 			let cell_pos = CellPos(x, y);
 			if let Entry::Occupied(entry) = maze.grid.entry(cell_pos) {
 				match *entry.get() {
